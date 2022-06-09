@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.AnnotatedType;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -17,17 +16,17 @@ import org.springframework.web.context.support.StandardServletEnvironment;
 
 
 /*
-* README
-* -> add the file in your project
-* -> add this line to main `ClassScanner.findAllAnnotatedClassesInPackage(base_package_name, Annotation.class);`
-* -> update ROOT String to the path where you want to create the files
-* -> uncomment the storeFields/ printClassCollection to see the dependency of the Annotated Classes in the project;
-* -> After running this file will create a new package of the Annotated Classes in hierarchy at the ROOT location.
-* -> Add this packet to new project to run it .
-* -> Make sure to add the required dependencies to pom.xml
-* BUG :
-* -> need to create Main file of your own
-* */
+ * README
+ * -> add the file in your project
+ * -> add this line to main `ClassScanner.findAllAnnotatedClassesInPackage(base_package_name, Annotation.class);`
+ * -> update ROOT String to the path where you want to create the files
+ * -> uncomment the storeFields/ printClassCollection to see the dependency of the Annotated Classes in the project;
+ * -> After running this file will create a new package of the Annotated Classes in hierarchy at the ROOT location.
+ * -> Add this packet to new project to run it .
+ * -> Make sure to add the required dependencies to pom.xml
+ * BUG :
+ * -> need to create Main file of your own
+ * */
 public class ClassScanner {
 
   private static final Logger logger = LoggerFactory.getLogger(ClassScanner.class);
@@ -56,7 +55,7 @@ public class ClassScanner {
 
   public static void createClassFile(Class<?> clazz){
     String fileName = clazz.getSimpleName();
-    String packageName = clazz.getPackageName();
+    String packageName = clazz.getPackage().getName();
     String packagePath =  packageName.replace('.', '/');
     String DIRECTORY = ROOT + packagePath ;
     File file= fileWithDirectoryAssurance(DIRECTORY , fileName);
@@ -87,12 +86,8 @@ public class ClassScanner {
   private static StringBuilder fillTemplate(Class<?> clazz) {
     StringBuilder template = new StringBuilder("");
     String clazzName = clazz.getSimpleName();
-    String packageName = clazz.getPackageName();
-    Field[] fieldValues = clazz.getDeclaredFields();
-    List<Field> declaredFields = new LinkedList<>();
-    for (Field field : fieldValues) {
-      declaredFields.add(field);
-    }
+    String packageName = clazz.getPackage().getName();
+    Field[] declaredFields = clazz.getDeclaredFields();
     StringBuilder pckageName = new StringBuilder("package " + packageName + ";\n\n");
     Set<String> libraries = new HashSet<>();
 
@@ -105,6 +100,7 @@ public class ClassScanner {
     for (Field field : declaredFields) {
       String fieldName = field.getGenericType().getTypeName();
       String fieldType = getFieldType(fieldName , libraries);
+      if(fieldType.equals("Logger"))continue;
       Annotation[] fieldAnnotation = field.getAnnotations();
       if(fieldAnnotation.length!=0) {
         for (Annotation anno : fieldAnnotation) {
@@ -114,13 +110,13 @@ public class ClassScanner {
       }
       else {
         try {
-          Class<?> c = Class.forName(String.valueOf(field.getAnnotatedType()));
+          Class<?> c = Class.forName(fieldName);
           if (c.getAnnotations().length!=0) {
             fieldsWithNoAnnotation.put(fieldType, field.getName());
           }
-          }catch(ClassNotFoundException e){
-            throw new RuntimeException(e);
-          }
+        }catch(ClassNotFoundException e){
+          System.out.println("field missed " + fieldName + "inside class " + clazzName + "inside package " + packageName);
+        }
       }
       template.append("\t").append(fieldType).append(" ").append(field.getName()).append(";\n");
     }
@@ -129,7 +125,7 @@ public class ClassScanner {
       template.append("@Autowired\n\t").append(clazzName).append("( ");
       libraries.add("org.springframework.beans.factory.annotation.*;");
       for (String S : fieldsWithNoAnnotation.keySet()) {
-            template.append(S).append(" ").append(fieldsWithNoAnnotation.get(S)).append(",");
+        template.append(S).append(" ").append(fieldsWithNoAnnotation.get(S)).append(",");
       }
       template.deleteCharAt(template.length()-1);
       template.append("){\n");
