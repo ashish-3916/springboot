@@ -25,7 +25,8 @@ import org.springframework.web.context.support.StandardServletEnvironment;
  * -> Add this packet to new project to run it .
  * -> Make sure to add the required dependencies to pom.xml
  * BUG :
- * -> need to create Main file of your own
+ * -> doesn't implements interface
+ * -> container classes eg Set<Class> , List<class> etc
  * */
 public class ClassScanner {
 
@@ -93,37 +94,43 @@ public class ClassScanner {
 
     Annotation[] clazzAnnotations = clazz.getAnnotations();
     for(Annotation anno : clazzAnnotations){
-      template.append("@").append(getAnnotationName(anno.toString() , libraries)).append("\n");
+      String libName = anno.annotationType().getName();
+      String annoName = anno.annotationType().getSimpleName();
+      libraries.add(libName);
+      template.append("@").append(annoName).append("\n");
     }
     template.append("public class ").append(clazzName).append(" {\n\n");
     TreeMap<String , String> fieldsWithNoAnnotation = new TreeMap<>();
     for (Field field : declaredFields) {
-      String fieldName = field.getGenericType().getTypeName();
-      String fieldType = getFieldType(fieldName , libraries);
+      String fieldType = field.getGenericType().getTypeName();
+      String fieldName = field.getName();
+      String sss = field.getDeclaringClass().getName();
       if(fieldType.equals("Logger"))continue;
       Annotation[] fieldAnnotation = field.getAnnotations();
       if(fieldAnnotation.length!=0) {
         for (Annotation anno : fieldAnnotation) {
-          String annotation = getAnnotationName(anno.toString(), libraries);
-          template.append("\t@").append(annotation).append("\n");
+          String libName = anno.annotationType().getName();
+          String annoName = anno.annotationType().getSimpleName();
+          libraries.add(libName);
+          template.append("\t@").append(annoName).append("\n");
         }
       }
       else {
         try {
-          Class<?> c = Class.forName(fieldName);
+          Class<?> c = Class.forName(fieldType);
           if (c.getAnnotations().length!=0) {
-            fieldsWithNoAnnotation.put(fieldType, field.getName());
+            fieldsWithNoAnnotation.put(fieldType, fieldName);
           }
         }catch(ClassNotFoundException e){
-          System.out.println("field missed " + fieldName + "inside class " + clazzName + "inside package " + packageName);
+          System.out.println("field missed : " + fieldName + ", inside class : " + clazzName + ", inside package : " + packageName);
         }
       }
-      template.append("\t").append(fieldType).append(" ").append(field.getName()).append(";\n");
+      template.append("\t").append(fieldType).append(" ").append(fieldName).append(";\n");
     }
     if(!fieldsWithNoAnnotation.isEmpty()){
       template.append("\n\t");
       template.append("@Autowired\n\t").append(clazzName).append("( ");
-      libraries.add("org.springframework.beans.factory.annotation.*;");
+      libraries.add("org.springframework.beans.factory.annotation.Autowired");
       for (String S : fieldsWithNoAnnotation.keySet()) {
         template.append(S).append(" ").append(fieldsWithNoAnnotation.get(S)).append(",");
       }
@@ -145,24 +152,6 @@ public class ClassScanner {
     return fileContent;
   }
 
-  static String getAnnotationName(String annotation , Set<String>libraries){
-    int index = 0;
-    for(int i =0 ; i< annotation.length(); i++){
-      if(annotation.charAt(i)=='.')index = i+1;
-      else if((annotation.charAt(i)=='('))break;
-    }
-    libraries.add(annotation.substring(1 , index) + "*");
-    return annotation.substring(index);
-  }
-  static String getFieldType(String fieldName ,  Set<String>libraries){
-    int index = 0;
-    for(int i =0 ; i< fieldName.length(); i++){
-      if(fieldName.charAt(i)=='.')index = i+1;
-      else if((fieldName.charAt(i)=='<'))break;
-    }
-    libraries.add(fieldName.substring(0 , index) + "*");
-    return fieldName.substring(index);
-  }
 //    public static void storeFields(Class<?> clazz){
 //        Field[] fieldValues = clazz.getDeclaredFields();
 //        String[] allFields = Arrays.toString(fieldValues).split(",");

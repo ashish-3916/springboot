@@ -1,6 +1,7 @@
 package com.start.course;
 
 import com.start.topic.Topic;
+import com.start.topic.TopicController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +11,7 @@ import java.util.Optional;
 @RestController
 public class CourseController {
 
-
+    private List<TopicController> topicController;
     private CourseService courseService;
 
     @Autowired
