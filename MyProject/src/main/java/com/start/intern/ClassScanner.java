@@ -101,10 +101,10 @@ public class ClassScanner {
 
     Annotation[] clazzAnnotations = clazz.getAnnotations();
     for(Annotation anno : clazzAnnotations){
-      String libName = anno.annotationType().getName();
-      String annoName = anno.annotationType().getSimpleName();
-      libraries.add(libName);
-      template.append("@").append(annoName).append("\n");
+      String classAnnoLibName = anno.annotationType().getName();
+      String classAnnoName = anno.annotationType().getSimpleName();
+      libraries.add(classAnnoLibName);
+      template.append("@").append(classAnnoName).append("\n");
     }
     template.append("public class ").append(clazzName).append(" {\n\n");
     TreeMap<String , String> addToConstructor = new TreeMap<>();
@@ -112,6 +112,7 @@ public class ClassScanner {
       String fieldType = field.getGenericType().getTypeName();
       String fieldTypeShort = getFieldType(fieldType);
       String fieldName = field.getName();
+      if(fieldTypeShort.equals("Logger")) continue;
       String fieldLibName = field.getType().getName();
       libraries.add(fieldLibName);
 
@@ -119,25 +120,26 @@ public class ClassScanner {
       Annotation[] fieldAnnotation = field.getAnnotations();
       if(fieldAnnotation.length!=0) {
         for (Annotation anno : fieldAnnotation) {
-          String annoLibName = anno.annotationType().getName();
-          String annoName = anno.annotationType().getSimpleName();
-          libraries.add(annoLibName);
-          template.append("\t@").append(annoName).append("\n");
+          String fieldAnnoLibName = anno.annotationType().getName();
+          String fieldAnnoName = anno.annotationType().getSimpleName();
+          libraries.add(fieldAnnoLibName);
+          template.append("\t@").append(fieldAnnoName).append("\n");
         }
       }
 
-        try {
-          Class<?> c = Class.forName(fieldType); //class can be an interface/annotated/ not annotated
-          if(c.isInterface()) { // is interface -> create one
-            interfaceCollection.add(fieldLibName);
-          }
-          else if (c.getAnnotations().length!=0) { // is a class -> check for annotated , if is component/service
-            addToConstructor.put(fieldName, fieldTypeShort);
-          }
-        }catch(ClassNotFoundException e){
-          addToConstructor.put(fieldName, fieldTypeShort);
-          System.out.println("missed inner fieldType of: " + fieldTypeShort + ", inside field : " + fieldName+ ", inside class : " + clazzName + ", inside package : " + packageName);
+      try {
+        Class<?> c = Class.forName(fieldType); //class can be an interface/annotated/ not annotated
+        if(c.isInterface()) { // is interface -> create one
+          interfaceCollection.add(fieldLibName);
         }
+        else if (c.getAnnotations().length!=0) { // is a class -> check for annotated , if is component/service
+          addToConstructor.put(fieldName, fieldTypeShort);
+        }
+      }catch(ClassNotFoundException e){
+        addToConstructor.put(fieldName, fieldTypeShort);
+        if(!isPrimitiveType(fieldType))
+          System.out.println("missed inner fieldType of: " + fieldTypeShort + ", inside field : " + fieldName+ ", inside class : " + clazzName + ", inside package : " + packageName);
+      }
 
       template.append("\t").append(fieldTypeShort).append(" ").append(fieldName).append(";\n");
     }
@@ -204,6 +206,16 @@ public class ClassScanner {
     template.append("package ").append(packageName).append(";\n\n");
     template.append("public interface ").append(clazzName).append("{\n}");
     return template;
+  }
+  public static boolean isPrimitiveType(String primitive){
+    return primitive.equals("boolean") ||
+            primitive.equals("byte") ||
+            primitive.equals("char") ||
+            primitive.equals("short") ||
+            primitive.equals("int") ||
+            primitive.equals("long") ||
+            primitive.equals("float") ||
+            primitive.equals("double") ;
   }
 //    public static void storeFields(Class<?> clazz){
 //        Field[] fieldValues = clazz.getDeclaredFields();
