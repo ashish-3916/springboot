@@ -18,8 +18,9 @@ public class CourseController {
     private CourseService courseService2;
 
     @Autowired
-    CourseController(CourseService courseService){
+    CourseController(CourseService courseService , List<TopicController> topicController){
         this.courseService = courseService;
+        this.topicController = topicController;
     }
 
     @RequestMapping("topics/{topicId}/courses")
