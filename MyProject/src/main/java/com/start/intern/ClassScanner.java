@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
 
@@ -25,12 +26,13 @@ import org.springframework.web.context.support.StandardServletEnvironment;
  * -> Add this packet to new project to run it .
  * -> Make sure to add the required dependencies to pom.xml
  * BUG :
- * -> need to create Main file of your own
+ * -> container classes eg Set<Class> , List<class> etc
  * */
 public class ClassScanner {
 
   private static final Logger logger = LoggerFactory.getLogger(ClassScanner.class);
   private static HashMap<String , Vector> classCollection = new HashMap<>();
+  private static  TreeSet<String> interfaceCollection = new TreeSet<>();
   static final String ROOT = "/Users/ashish/Desktop/CreateFile/";
 
   ClassScanner(){
@@ -40,6 +42,7 @@ public class ClassScanner {
     final List<Class<?>> result = new ArrayList<>();
     final ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(true, new StandardServletEnvironment());
     provider.addIncludeFilter(new AnnotationTypeFilter(clazz));
+
     for (BeanDefinition beanDefinition : provider.findCandidateComponents(packageName)) {
       try {
         result.add(Class.forName(beanDefinition.getBeanClassName()));
@@ -51,9 +54,14 @@ public class ClassScanner {
       createClassFile(obj);
 //        storeFields(obj);
     }
+    createInterfaceFile();
   }
 
   public static void createClassFile(Class<?> clazz){
+    String filePath = createFile(clazz);
+    populateClassFile(clazz , filePath);
+  }
+  public static String createFile(Class<?> clazz){
     String fileName = clazz.getSimpleName();
     String packageName = clazz.getPackage().getName();
     String packagePath =  packageName.replace('.', '/');
@@ -65,7 +73,7 @@ public class ClassScanner {
       throw new RuntimeException(e);
     }
     String filePath = DIRECTORY + "/" + fileName + ".java";
-    populateFile(clazz , filePath);
+    return  filePath;
   }
   private static File fileWithDirectoryAssurance(String directory, String filename) {
     File dir = new File(directory);
@@ -73,17 +81,18 @@ public class ClassScanner {
     return new File(directory + "/" + filename +".java");
   }
 
-  private static void populateFile(Class<?> clazz , String filePath){
+  private static void populateClassFile(Class<?> clazz , String filePath){
     try {
       FileWriter myWriter = new FileWriter(filePath);
-      StringBuilder text = fillTemplate(clazz);
+      StringBuilder text = fillClassTemplate(clazz);
       myWriter.write(String.valueOf(text));
       myWriter.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
   }
-  private static StringBuilder fillTemplate(Class<?> clazz) {
+
+  private static StringBuilder fillClassTemplate(Class<?> clazz) {
     StringBuilder template = new StringBuilder("");
     String clazzName = clazz.getSimpleName();
     String packageName = clazz.getPackage().getName();
@@ -93,44 +102,59 @@ public class ClassScanner {
 
     Annotation[] clazzAnnotations = clazz.getAnnotations();
     for(Annotation anno : clazzAnnotations){
-      template.append("@").append(getAnnotationName(anno.toString() , libraries)).append("\n");
+      String classAnnoLibName = anno.annotationType().getName();
+      String classAnnoName = anno.annotationType().getSimpleName();
+      libraries.add(classAnnoLibName);
+      template.append("@").append(classAnnoName).append("\n");
     }
     template.append("public class ").append(clazzName).append(" {\n\n");
-    TreeMap<String , String> fieldsWithNoAnnotation = new TreeMap<>();
+    TreeMap<String , String> addToConstructor = new TreeMap<>();
     for (Field field : declaredFields) {
-      String fieldName = field.getGenericType().getTypeName();
-      String fieldType = getFieldType(fieldName , libraries);
-      if(fieldType.equals("Logger"))continue;
+      String fieldType = field.getGenericType().getTypeName();
+      String fieldTypeShort = getFieldType(fieldType);
+      String fieldName = field.getName();
+      if(fieldTypeShort.equals("Logger")) continue;
+      String fieldLibName = field.getType().getName();
+      libraries.add(fieldLibName);
+
+
       Annotation[] fieldAnnotation = field.getAnnotations();
       if(fieldAnnotation.length!=0) {
         for (Annotation anno : fieldAnnotation) {
-          String annotation = getAnnotationName(anno.toString(), libraries);
-          template.append("\t@").append(annotation).append("\n");
+          String fieldAnnoLibName = anno.annotationType().getName();
+          String fieldAnnoName = anno.annotationType().getSimpleName();
+          libraries.add(fieldAnnoLibName);
+          template.append("\t@").append(fieldAnnoName).append("\n");
         }
       }
-      else {
-        try {
-          Class<?> c = Class.forName(fieldName);
-          if (c.getAnnotations().length!=0) {
-            fieldsWithNoAnnotation.put(fieldType, field.getName());
-          }
-        }catch(ClassNotFoundException e){
-          System.out.println("field missed " + fieldName + "inside class " + clazzName + "inside package " + packageName);
+
+      try {
+        Class<?> c = Class.forName(fieldType); //class can be an interface/annotated/ not annotated
+        if(c.isInterface()) { // is interface -> create one
+          interfaceCollection.add(fieldLibName);
         }
+        else if (c.getAnnotations().length!=0) { // is a class -> check for annotated , if is component/service
+          addToConstructor.put(fieldName, fieldTypeShort);
+        }
+      }catch(ClassNotFoundException e){
+        addToConstructor.put(fieldName, fieldTypeShort);
+        if(!isPrimitiveType(fieldType))
+          System.out.println("missed inner fieldType of: " + fieldTypeShort + ", inside field : " + fieldName+ ", inside class : " + clazzName + ", inside package : " + packageName);
       }
-      template.append("\t").append(fieldType).append(" ").append(field.getName()).append(";\n");
+
+      template.append("\t").append(fieldTypeShort).append(" ").append(fieldName).append(";\n");
     }
-    if(!fieldsWithNoAnnotation.isEmpty()){
+    if(!addToConstructor.isEmpty()){
       template.append("\n\t");
       template.append("@Autowired\n\t").append(clazzName).append("( ");
-      libraries.add("org.springframework.beans.factory.annotation.*;");
-      for (String S : fieldsWithNoAnnotation.keySet()) {
-        template.append(S).append(" ").append(fieldsWithNoAnnotation.get(S)).append(",");
+      libraries.add("org.springframework.beans.factory.annotation.Autowired");
+      for (String S : addToConstructor.keySet()) {
+        template.append(addToConstructor.get(S)).append(" ").append(S).append(",");
       }
       template.deleteCharAt(template.length()-1);
       template.append("){\n");
-      for (String S : fieldsWithNoAnnotation.keySet()) {
-        template.append("\t\t").append("this.").append(fieldsWithNoAnnotation.get(S)).append(" = ").append(fieldsWithNoAnnotation.get(S)).append(";\n");
+      for (String S : addToConstructor.keySet()) {
+        template.append("\t\t").append("this.").append(S).append(" = ").append(S).append(";\n");
       }
       template.append("\t}");
     }
@@ -145,23 +169,54 @@ public class ClassScanner {
     return fileContent;
   }
 
-  static String getAnnotationName(String annotation , Set<String>libraries){
-    int index = 0;
-    for(int i =0 ; i< annotation.length(); i++){
-      if(annotation.charAt(i)=='.')index = i+1;
-      else if((annotation.charAt(i)=='('))break;
+  private static String getFieldType(String fieldType) {
+    int index = 0 ;
+    for(int i= 0 ; i<fieldType.length(); i++){
+      if(fieldType.charAt(i)=='.') index = i + 1;
+      else if (fieldType.charAt(i)=='<') break;
     }
-    libraries.add(annotation.substring(1 , index) + "*");
-    return annotation.substring(index);
+    return fieldType.substring(index);
   }
-  static String getFieldType(String fieldName ,  Set<String>libraries){
-    int index = 0;
-    for(int i =0 ; i< fieldName.length(); i++){
-      if(fieldName.charAt(i)=='.')index = i+1;
-      else if((fieldName.charAt(i)=='<'))break;
+
+
+  private static void createInterfaceFile(){
+    for(String c : interfaceCollection ){
+      try {
+        Class<?> clazz = Class.forName(c);
+        String filePath = createFile(clazz);
+        populateInterfaceFile(clazz , filePath);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
     }
-    libraries.add(fieldName.substring(0 , index) + "*");
-    return fieldName.substring(index);
+  }
+  private static void populateInterfaceFile(Class<?> clazz , String filePath){
+    try {
+      FileWriter myWriter = new FileWriter(filePath);
+      StringBuilder text = fillInterfaceTemplate(clazz);
+      myWriter.write(String.valueOf(text));
+      myWriter.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  private  static StringBuilder fillInterfaceTemplate(Class<?> clazz){
+    StringBuilder template = new StringBuilder("");
+    String clazzName = clazz.getSimpleName();
+    String packageName = clazz.getPackage().getName();
+    template.append("package ").append(packageName).append(";\n\n");
+    template.append("public interface ").append(clazzName).append("{\n}");
+    return template;
+  }
+  public static boolean isPrimitiveType(String primitive){
+    return primitive.equals("boolean") ||
+            primitive.equals("byte") ||
+            primitive.equals("char") ||
+            primitive.equals("short") ||
+            primitive.equals("int") ||
+            primitive.equals("long") ||
+            primitive.equals("float") ||
+            primitive.equals("double") ;
   }
 //    public static void storeFields(Class<?> clazz){
 //        Field[] fieldValues = clazz.getDeclaredFields();
