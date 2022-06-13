@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
 
@@ -25,7 +26,6 @@ import org.springframework.web.context.support.StandardServletEnvironment;
  * -> Add this packet to new project to run it .
  * -> Make sure to add the required dependencies to pom.xml
  * BUG :
- * -> doesn't implements interface
  * -> container classes eg Set<Class> , List<class> etc
  * */
 public class ClassScanner {
@@ -42,6 +42,7 @@ public class ClassScanner {
     final List<Class<?>> result = new ArrayList<>();
     final ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(true, new StandardServletEnvironment());
     provider.addIncludeFilter(new AnnotationTypeFilter(clazz));
+
     for (BeanDefinition beanDefinition : provider.findCandidateComponents(packageName)) {
       try {
         result.add(Class.forName(beanDefinition.getBeanClassName()));
