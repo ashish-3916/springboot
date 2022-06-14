@@ -35,6 +35,7 @@ import org.springframework.web.context.support.StandardServletEnvironment;
 public class ClassScanner {
 
     private static final Logger logger = LoggerFactory.getLogger(com.start.notOfUse.ClassScannerAlt.class);
+    private static  HashMap<String, Set> dependencyTree = new HashMap<>();
     private static  Set<Class<?>> interfaceCollections = new HashSet<>();
     private static Set<String> requiredAnnotation = new HashSet<>();
     static final String ROOT = "/Users/ashish/Desktop/CreateFile/";
@@ -70,6 +71,7 @@ public class ClassScanner {
             createClassFile(obj);
         }
         createInterfaceFile();
+        printDependencyTree();
     }
 
     public static void createClassFile(Class<?> clazz){
@@ -111,6 +113,7 @@ public class ClassScanner {
         String clazzName = clazz.getSimpleName();
         String packageName = clazz.getPackage().getName();
         Set<String> libraries = new HashSet<>();
+        Set<String> allDependencies = new TreeSet<>();
 // ---------------------------------PACKAGE CONTENT------------------------------------------------------------------------------------------------------------------------
 
         StringBuilder packageContent = new StringBuilder("package " + packageName + ";\n\n");
@@ -154,6 +157,7 @@ public class ClassScanner {
             if (fieldContainsRequiredAnnotation) {
                 libraries.add(fieldLibName);
                 fieldContent.append("\t").append(fieldTypeShort).append(" ").append(fieldName).append(";\n");
+                allDependencies.add(fieldTypeShort);
                 Class<?> clz  = field.getType(); // for interface
                 String clzName = clz.getName();
                 if(clz.isInterface() && !clzName.contains("java.util")){
@@ -191,6 +195,7 @@ public class ClassScanner {
                     String parameterTypeLib = constructorParameter.getType().getTypeName();
                     fieldContent.append("\t").append(parameterTypeName).append(" ").append(parameterName).append(";\n");
                     constructorContent.append(parameterTypeName).append(" ").append(parameterName).append(",");
+                    allDependencies.add(parameterTypeName);
                     libraries.add(parameterTypeLib);
                     initialisedFields.add(parameterName);
                     try {
@@ -220,13 +225,15 @@ public class ClassScanner {
             if(!s.contains(packageName))
                  libraryContent.append("import ").append(s).append(";\n");
         }
+// --------------------------------- ADDING DEPENDENCY TO THE THE ADJACENCY LIST--------------------------------------------------------------------------------------------------
+        dependencyTree.put(clazzName, allDependencies);
 // ---------------------------------FINALLY FILE  CONTENT------------------------------------------------------------------------------------------------------------------------
 
         StringBuilder fileContent = new StringBuilder("");
         fileContent.append(packageContent).append(libraryContent).append(classContent).append(fieldContent).append(constructorContent).append("}");
         return fileContent;
     }
-// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//==========================================================================================================================================================================
 
 // --------------------------------- HANDLING INTERFACES------------------------------------------------------------------------------------------------------------------------
 
@@ -263,5 +270,13 @@ public class ClassScanner {
             else if (fieldType.charAt(i)=='<') break;
         }
         return fieldType.substring(index);
+    }
+    private static void printDependencyTree(){
+        for(String parent : dependencyTree.keySet()){
+            System.out.println(parent);
+            for(Object child : dependencyTree.get(parent)){
+                System.out.println("\t|___"+child);
+            }
+        }
     }
 }
