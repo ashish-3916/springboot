@@ -24,7 +24,7 @@ import org.springframework.web.context.support.StandardServletEnvironment;
 
 public class ClassScanner {
 
-    private static final Logger logger = LoggerFactory.getLogger(com.start.notOfUse.ClassScannerAlt.class);
+    private static final Logger logger = LoggerFactory.getLogger(com.start.intern.ClassScanner.class);
     private static  HashMap<String, Set> dependencyTree = new HashMap<>();
     private static  Set<Class<?>> interfaceCollections = new HashSet<>();
     private static Set<String> requiredAnnotation = new HashSet<>();
@@ -62,11 +62,11 @@ public class ClassScanner {
         printDependencyTree();
     }
 
-    public static void createClassFile(Class<?> clazz){
+    private static void createClassFile(Class<?> clazz){
         String filePath = createFile(clazz);
         populateClassFile(clazz , filePath);
     }
-    public static String createFile(Class<?> clazz){
+    private static String createFile(Class<?> clazz){
         String fileName = clazz.getSimpleName();
         String packageName = clazz.getPackage().getName();
         String packagePath =  packageName.replace('.', '/');
@@ -103,11 +103,11 @@ public class ClassScanner {
         Set<String> libraries = new HashSet<>();
         Set<String> allDependencies = new TreeSet<>();
 
-        // -------------------PACKAGE CONTENT-----------------------
+        // ------------------- PACKAGE CONTENT -----------------------
 
         StringBuilder packageContent = new StringBuilder("package " + packageName + ";\n\n");
 
-        // -------------------CLASS CONTENT-----------------------
+        // ------------------- CLASS CONTENT -----------------------
 
         StringBuilder classContent = new StringBuilder("\n");
         Annotation[] clazzAnnotations = clazz.getAnnotations();
@@ -121,7 +121,7 @@ public class ClassScanner {
         }
         classContent.append("public class ").append(clazzName).append(" {\n\n");
 
-        // ---------------------FIELD CONTENT----------------
+        // --------------------- FIELD CONTENT ----------------
 
         StringBuilder fieldContent = new StringBuilder("");
         Field[] declaredFields = clazz.getDeclaredFields();
@@ -155,7 +155,7 @@ public class ClassScanner {
             }
         }
 
-        // ---------------------CONSTRUCTOR CONTENT----------------
+        // --------------------- CONSTRUCTOR CONTENT ----------------
 
         StringBuilder constructorContent = new StringBuilder("\n");
 
@@ -196,10 +196,9 @@ public class ClassScanner {
                     } catch (ClassNotFoundException e) {
                         throw new RuntimeException(e);
                     }
-//
                 }
                 if(constructorParameters.length!=0)
-                    constructorContent.deleteCharAt(constructorContent.length() -1); // delete a comma
+                    constructorContent.deleteCharAt(constructorContent.length() -1); // delete a last comma from parameters
                 constructorContent.append("){\n");
                 for(String initialisedField : initialisedFields){
                     constructorContent.append("\t\t").append("this.").append(initialisedField).append(" = ").append(initialisedField).append(";\n");
@@ -208,7 +207,7 @@ public class ClassScanner {
             }
         }
 
-        // ---------------------LIBRARY CONTENT----------------
+        // --------------------- LIBRARY CONTENT ----------------
 
         StringBuilder libraryContent = new StringBuilder("\n");
         for(String s : libraries){
@@ -219,7 +218,7 @@ public class ClassScanner {
 
         dependencyTree.put(clazzName, allDependencies);
 
-        // -------------- FINALLY FILE  CONTENT------------------
+        // -------------- FINALLY FILE CONTENT ------------------
 
         StringBuilder fileContent = new StringBuilder("");
         fileContent.append(packageContent).append(libraryContent).append(classContent).append(fieldContent).append(constructorContent).append("}");
@@ -235,7 +234,7 @@ public class ClassScanner {
     }
 //==========================================================================================================================================================================
 
-    //-------- HANDLING INTERFACES----------
+    //-------- HANDLING INTERFACES ----------
 
     private static void createInterfaceFile(){
         for(Class<?> clazz : interfaceCollections ){
