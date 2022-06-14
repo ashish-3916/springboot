@@ -1,18 +1,16 @@
 package com.start;
 
 import com.start.intern.ClassScanner;
-import com.start.intern.ClassScannerAlt;
-import org.springframework.boot.SpringApplication;
+import com.start.notOfUse.ClassScannerAlt;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import java.lang.annotation.Annotation;
 
 @SpringBootApplication
 public class Main {
 
 	public static void main(String[] args) {
 //	   SpringApplication.run(Main.class, args);
-//		ClassScanner.findAllAnnotatedClassesInPackage("com.start", Annotation.class); // give the name of base package here .
-		ClassScannerAlt.findAllAnnotatedClassesInPackage("com.start"); // give the name of base package here .
+//		ClassScannerAlt.findAllAnnotatedClassesInPackage("com.start", Annotation.class); // give the name of base package here .
+		ClassScanner.findAllAnnotatedClassesInPackage("com.start"); // give the name of base package here .
 
 //	   SprinklrProject.findClazz();
 //	   SprinklrProject.printClassCollection();

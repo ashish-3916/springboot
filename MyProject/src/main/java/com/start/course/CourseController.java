@@ -12,15 +12,22 @@ import java.util.Optional;
 public class CourseController {
 
     private List<TopicController> topicController;
+
+    @Autowired
+    private List<TopicController> topicController1;
+
     private CourseService courseService;
+    int i;
+
 
     @Autowired
     private CourseService courseService2;
 
     @Autowired
-    CourseController(CourseService courseService , List<TopicController> topicController){
+    CourseController(CourseService courseService , List<TopicController> topicController ){
         this.courseService = courseService;
         this.topicController = topicController;
+
     }
 
     @RequestMapping("topics/{topicId}/courses")
