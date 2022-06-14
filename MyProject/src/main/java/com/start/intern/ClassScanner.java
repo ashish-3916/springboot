@@ -22,16 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.support.StandardServletEnvironment;
 
 
-/**
-* * README<p>
-* -> add the file in your project<p>
-* -> add this line to main `ClassScanner.findAllAnnotatedClassesInPackage(base_package_name);`<p>
-* -> update ROOT String to the path where you want to create the files<p>
-* -> After running this file will create a new package of the Annotated Classes in hierarchy at the ROOT location.<p>
-* -> Add this package to new project to run it .<p>
-* -> Make sure to add the required dependencies to pom.xml<p>
-* BUG :
-*/
 public class ClassScanner {
 
     private static final Logger logger = LoggerFactory.getLogger(com.start.notOfUse.ClassScannerAlt.class);
@@ -40,9 +30,8 @@ public class ClassScanner {
     private static Set<String> requiredAnnotation = new HashSet<>();
     static final String ROOT = "/Users/ashish/Desktop/CreateFile/";
 
-    ClassScanner(){
+    ClassScanner(){}
 
-    }
     public static void findAllAnnotatedClassesInPackage(String packageName) {
         final List<Class<?>> result = new ArrayList<>();
         final ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(false, new StandardServletEnvironment());
@@ -58,7 +47,6 @@ public class ClassScanner {
         requiredAnnotation.add("Controller");
         requiredAnnotation.add("Autowired");
 //        provider.addIncludeFilter(new AnnotationTypeFilter(Entity.class));
-
 
         for (BeanDefinition beanDefinition : provider.findCandidateComponents(packageName)) {
             try {
@@ -114,11 +102,12 @@ public class ClassScanner {
         String packageName = clazz.getPackage().getName();
         Set<String> libraries = new HashSet<>();
         Set<String> allDependencies = new TreeSet<>();
-// ---------------------------------PACKAGE CONTENT------------------------------------------------------------------------------------------------------------------------
+
+        // -------------------PACKAGE CONTENT-----------------------
 
         StringBuilder packageContent = new StringBuilder("package " + packageName + ";\n\n");
 
-// ---------------------------------CLASS CONTENT------------------------------------------------------------------------------------------------------------------------
+        // -------------------CLASS CONTENT-----------------------
 
         StringBuilder classContent = new StringBuilder("\n");
         Annotation[] clazzAnnotations = clazz.getAnnotations();
@@ -132,7 +121,7 @@ public class ClassScanner {
         }
         classContent.append("public class ").append(clazzName).append(" {\n\n");
 
- // ---------------------------------FIELD CONTENT------------------------------------------------------------------------------------------------------------------------
+        // ---------------------FIELD CONTENT----------------
 
         StringBuilder fieldContent = new StringBuilder("");
         Field[] declaredFields = clazz.getDeclaredFields();
@@ -166,7 +155,7 @@ public class ClassScanner {
             }
         }
 
-// ---------------------------------CONSTRUCTOR CONTENT------------------------------------------------------------------------------------------------------------------------
+        // ---------------------CONSTRUCTOR CONTENT----------------
 
         StringBuilder constructorContent = new StringBuilder("\n");
 
@@ -219,23 +208,34 @@ public class ClassScanner {
             }
         }
 
-// ---------------------------------LIBRARY CONTENT------------------------------------------------------------------------------------------------------------------------
+        // ---------------------LIBRARY CONTENT----------------
+
         StringBuilder libraryContent = new StringBuilder("\n");
         for(String s : libraries){
             if(!s.contains(packageName))
                  libraryContent.append("import ").append(s).append(";\n");
         }
-// --------------------------------- ADDING DEPENDENCY TO THE THE ADJACENCY LIST--------------------------------------------------------------------------------------------------
+        // ----- ADDING DEPENDENCY TO THE THE ADJACENCY LIST ---------
+
         dependencyTree.put(clazzName, allDependencies);
-// ---------------------------------FINALLY FILE  CONTENT------------------------------------------------------------------------------------------------------------------------
+
+        // -------------- FINALLY FILE  CONTENT------------------
 
         StringBuilder fileContent = new StringBuilder("");
         fileContent.append(packageContent).append(libraryContent).append(classContent).append(fieldContent).append(constructorContent).append("}");
         return fileContent;
     }
+    private static String getFieldType(String fieldType) {
+        int index = 0 ;
+        for(int i= 0 ; i<fieldType.length(); i++){
+            if(fieldType.charAt(i)=='.') index = i + 1;
+            else if (fieldType.charAt(i)=='<') break;
+        }
+        return fieldType.substring(index);
+    }
 //==========================================================================================================================================================================
 
-// --------------------------------- HANDLING INTERFACES------------------------------------------------------------------------------------------------------------------------
+    //-------- HANDLING INTERFACES----------
 
     private static void createInterfaceFile(){
         for(Class<?> clazz : interfaceCollections ){
@@ -263,14 +263,9 @@ public class ClassScanner {
         interfaceContent.append("public class ").append(clazzName).append("{\n}");
         return interfaceContent;
     }
-    private static String getFieldType(String fieldType) {
-        int index = 0 ;
-        for(int i= 0 ; i<fieldType.length(); i++){
-            if(fieldType.charAt(i)=='.') index = i + 1;
-            else if (fieldType.charAt(i)=='<') break;
-        }
-        return fieldType.substring(index);
-    }
+
+//==========================================================================================================================================================================
+
     private static void printDependencyTree(){
         for(String parent : dependencyTree.keySet()){
             System.out.println(parent);
