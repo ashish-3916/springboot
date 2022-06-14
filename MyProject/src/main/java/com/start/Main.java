@@ -2,6 +2,7 @@ package com.start;
 
 import com.start.intern.ClassScanner;
 import com.start.notOfUse.ClassScannerAlt;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
