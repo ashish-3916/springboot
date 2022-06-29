@@ -11,6 +11,7 @@ import java.util.Optional;
 @RestController
 public class CourseController {
 
+
     private List<TopicController> topicController;
 
     @Autowired
@@ -25,9 +26,9 @@ public class CourseController {
 
     @Autowired
     CourseController(CourseService courseService , List<TopicController> topicController ){
+
         this.courseService = courseService;
         this.topicController = topicController;
-
     }
 
     @RequestMapping("topics/{topicId}/courses")
