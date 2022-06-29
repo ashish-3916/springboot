@@ -11,6 +11,12 @@ public class TopicController {
 
     @Autowired
     private TopicService topicService;
+    private TopicService topicService2;
+
+    @Autowired
+    TopicController(TopicService ts){
+            topicService2 = ts;
+    }
 
     @RequestMapping("/topics")
     public List<Topic> getAllTopics(){

@@ -46,8 +46,6 @@ public class ClassScanner {
         requiredAnnotation.add("Repository");
         requiredAnnotation.add("Controller");
         requiredAnnotation.add("Autowired");
-//        provider.addIncludeFilter(new AnnotationTypeFilter(Entity.class));
-
         for (BeanDefinition beanDefinition : provider.findCandidateComponents(packageName)) {
             try {
                 result.add(Class.forName(beanDefinition.getBeanClassName()));

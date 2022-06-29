@@ -24,7 +24,7 @@ WORKING :
 		  (currently filters added : Component , Service , Controller , Autowired, Repository)
 		- findCandidateComponents method gives all the required beans
 	
-	- part 2 -> (deserialization) making a new project.
+	- PART 2 -> (deserialization) making a new project.
 		- created new files with directory assurance.
 		- populating the files
 
